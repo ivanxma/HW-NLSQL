@@ -183,7 +183,7 @@ def isValid_user(user, password):
 
     return True
 
-def setupDB :
+def setupDB() :
 
     cnx = connectMySQL(myconfig)
     try:
