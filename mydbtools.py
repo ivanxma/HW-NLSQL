@@ -28,7 +28,6 @@ def callProc(theProc, args, cnx) :
         return None
 
     returnvar={}
-    print(result_args)
     returnvar['output'] = result_args[1]
     returnvar['resultset'] = dataset
     returnvar['columnset'] = columnset
@@ -101,8 +100,9 @@ def getNLSQLLLMModel() :
     cnx = connectMySQL(myconfig)
     llmModels=[]
     try:
+          # select model_id, capabilities->>'$[0]' from sys.ML_SUPPORTED_LLMS where capabilities->>'$[0]'='GENERATION' and model_id in ('meta.llama-3.3-70b-instruct', 'meta.llama-3.3-70b-instruct', 'llama3.1-8b-instruct-v1', 'llama3.2-3b-instruct-v1')
         data = runSQL("""
-          select model_id, capabilities->>'$[0]' from sys.ML_SUPPORTED_LLMS where capabilities->>'$[0]'='GENERATION' and model_id in ('meta.llama-3.3-70b-instruct', 'meta.llama-3.3-70b-instruct', 'llama3.1-8b-instruct-v1', 'llama3.2-3b-instruct-v1')
+          select model_id, capabilities->>'$[0]' from sys.ML_SUPPORTED_LLMS where capabilities->>'$[0]'='GENERATION'
         """, cnx)
         for row in data:
            llmModels.append(row[0])
