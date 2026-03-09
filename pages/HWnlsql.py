@@ -85,5 +85,6 @@ st.set_page_config(page_title="HeatWave Demo - NLSQL", layout="wide")
 st.session_state.logged_in = login_page()
 
 if st.session_state.logged_in:
+      setupDB()
       main()
 
