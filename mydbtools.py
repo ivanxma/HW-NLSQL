@@ -188,7 +188,7 @@ def setupDB() :
     cnx = connectMySQL(myconfig)
     try:
         data = runSQL("""
-          create database if not exists nlsql2;
+          create database if not exists nlsql;
           create table if not exists nlsql.configdb (db_name varchar(64) not null primary key, enabled char(1) not null);
           select x.* from (SELECT schema_name AS 'database', 'Y' AS has_it FROM ( VALUES ROW('information_schema'), ROW('sys'), ROW('performance_schema')) AS t(schema_name)) x left join nlsql.configdb y on (x.database = y.db_name) where y.db_name is null;
         """, cnx)
