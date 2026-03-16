@@ -58,8 +58,9 @@ def main() :
   
             isValidSQL = outputarg['is_sql_valid'] 
             if isValidSQL == 1 :
-              mydf = pd.DataFrame(resultset[1], columns=columnset[1])
-              st.dataframe(mydf)
+              for i in range(len(resultset)) : 
+                mydf1 = pd.DataFrame(resultset[i], columns=columnset[i])
+                st.dataframe(mydf1)
             st.text_area("The SQL", outputarg['sql_query'], 100)
             st.text_area("The Tables", outputarg['tables'], 100)
   

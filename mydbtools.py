@@ -35,7 +35,20 @@ def callProc(theProc, args, cnx) :
 
 
 
-def runSQL(theSQL, cnx ) :
+def execSQL(theSQL, cnx ) :
+    cursor = cnx.cursor()
+    try : 
+           cursor.execute(theSQL)
+           cnx.commit()
+
+    except mysql.connector.Error as error:
+        cnx.rollback()
+        print("executing SQL failure : {}".format(error))
+    finally:
+            if cnx.is_connected():
+                cursor.close()
+
+def runSQL(theSQL,cnx) :
     cursor = cnx.cursor()
     try : 
            cursor.execute(theSQL)
@@ -44,9 +57,11 @@ def runSQL(theSQL, cnx ) :
 
     except mysql.connector.Error as error:
         print("executing SQL failure : {}".format(error))
+        return None
     finally:
             if cnx.is_connected():
                 cursor.close()
+
 
 def getEmbModel() :
     cnx = connectMySQL(myconfig)
@@ -187,10 +202,14 @@ def setupDB() :
 
     cnx = connectMySQL(myconfig)
     try:
-        data = runSQL("""
+        execSQL("""
           create database if not exists nlsql;
+        """, cnx)
+        execSQL("""
           create table if not exists nlsql.configdb (db_name varchar(64) not null primary key, enabled char(1) not null);
-          select x.* from (SELECT schema_name AS 'database', 'Y' AS has_it FROM ( VALUES ROW('information_schema'), ROW('sys'), ROW('performance_schema')) AS t(schema_name)) x left join nlsql.configdb y on (x.database = y.db_name) where y.db_name is null;
+        """, cnx)
+        execSQL("""
+          insert into nlsql.configdb select x.* from (SELECT schema_name AS 'database', 'Y' AS has_it FROM ( VALUES ROW('information_schema'), ROW('sys'), ROW('performance_schema')) AS t(schema_name)) x left join nlsql.configdb y on (x.database = y.db_name) where y.db_name is null;
         """, cnx)
 
     except Exception as error:
