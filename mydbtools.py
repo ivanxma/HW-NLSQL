@@ -100,7 +100,7 @@ def getVisionLLMModel() :
     llmModels=[]
     try:
         data = runSQL("""
-          select model_id, capabilities->>'$[0]' from sys.ML_SUPPORTED_LLMS where capabilities->>'$[0]'='GENERATION' and model_id like '%vision%'
+          select model_id, capabilities->>'$[0]' from sys.ML_SUPPORTED_LLMS where capabilities->>'$[0]'='GENERATION' 
         """, cnx)
         for row in data:
            llmModels.append(row[0])

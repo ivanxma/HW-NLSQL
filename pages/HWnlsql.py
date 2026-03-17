@@ -42,7 +42,7 @@ def main() :
   col1, col2 = st.columns(2)
   with col1 :
     myquestion = st.text_input("Question about the image")
-    submitButton = st.button('Submit', use_container_width=True)
+    submitButton = st.button('Submit', width='stretch')
   with col2 :
     db = st.multiselect('Choose DB : ', getDB(), default=[ "information_schema", "performance_schema"]  )
     nlllmmodel = getNLSQLLLMModel()

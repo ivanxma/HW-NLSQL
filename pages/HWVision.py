@@ -29,7 +29,7 @@ def answer_query_on_image(aquestion, allm, aimage):
     
 def main() :
    # Set title
-   st.set_page_config(page_title="HeatWave Demo - Vision LLM", layout="wide")
+   # st.set_page_config(page_title="HeatWave Demo - Vision LLM", layout="wide")
    st.title("📷 HeatWave demo Image using Visual LLM") 
    
    # File uploader
@@ -40,7 +40,7 @@ def main() :
        image = Image.open(uploaded_file)
        col1, col2 = st.columns(2)
        with col1 :
-         st.image(image, caption="Uploaded Image", use_container_width=True)
+         st.image(image, caption="Uploaded Image", width='stretch')
    
          # Convert image to base64
          buffered = io.BytesIO()
@@ -56,7 +56,7 @@ def main() :
          myquestion = st.text_input("Question about the image")
          llm = st.selectbox('Choose LLM : ', getVisionLLMModel())
    
-         submitButton = st.button('Submit', use_container_width=True)
+         submitButton = st.button('Submit', width='stretch') 
          if submitButton :
            # Now you can use `img_base64` variable as needed
            ans = answer_query_on_image(myquestion, llm, img_base64)
