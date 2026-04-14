@@ -1,0 +1,4 @@
+__pycache__
+globalvar.py
+.streamlit/certs/
+.streamlit/secrets.toml

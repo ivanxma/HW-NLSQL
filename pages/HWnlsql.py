@@ -1,91 +1,105 @@
-import streamlit as st
-import mysql.connector
-import pandas as pd
-import globalvar
-from mydbtools import *
 import json
 
-# https://dev.mysql.com/doc/heatwave/en/mys-hwgenai-nl-sql.html
+import pandas as pd
+import streamlit as st
 
-# MySQL Connectoin Profile
-myconfig = globalvar.myconfig
+from mydbtools import (
+    callProc,
+    connectMySQL,
+    getDB,
+    getNLSQLLLMModel,
+    init_session_state,
+    login_page,
+    setupDB,
+    show_connection_status,
+)
 
 
 def call_nlsql(aquestion, allm, adb):
-           
-   with connectMySQL(myconfig) as db:
-
-   	cursor = db.cursor()
-   	mydbs = ', '.join(['"{}"'.format(value) for value in adb])
-
-   	myquery = """
-   	CALL sys.NL_SQL("{question}", @output, JSON_OBJECT("execute",true, "model_id","{llm}", "schemas",JSON_ARRAY({dblist})));
-   	""".format(question=aquestion, llm=allm, dblist=mydbs)
-   	st.write(myquery)
+    with connectMySQL() as db:
+        mydbs = ', '.join(['"{}"'.format(value) for value in adb])
+        optString = '{{"execute":true, "model_id":"{llm}", "schemas":[{dblist}]}}'.format(
+            llm=allm,
+            dblist=mydbs,
+        )
+        args = [aquestion, "", optString]
+        return callProc("sys.NL_SQL", args, db)
 
 
-   	optString = '{{"execute":true, "model_id":"{llm}", "schemas":[{dblist}]}}'.format(llm=allm, dblist=mydbs)
+def main():
+    st.title("HeatWave demo NL_SQL")
+    show_connection_status()
+    st.page_link(
+        "https://dev.mysql.com/doc/heatwave/en/mys-hw-genai-nl-sql.html",
+        label="NL_SQL Page",
+        icon="🌎",
+    )
 
-   	output_var = ""
-   	args = [aquestion, output_var, optString]
+    col1, col2 = st.columns(2)
+    with col1:
+        myquestion = st.text_input("Question")
+        submitButton = st.button("Submit", width="stretch")
+    with col2:
+        databases = getDB()
+        default_databases = [
+            db_name
+            for db_name in ("information_schema", "performance_schema")
+            if db_name in databases
+        ]
+        db = st.multiselect("Choose DB", databases, default=default_databases)
+        nlllmmodel = getNLSQLLLMModel()
+        if not nlllmmodel:
+            st.error("No supported generation models were found for this connection.")
+            return
+        default_model = "meta.llama-3.3-70b-instruct"
+        default_index = nlllmmodel.index(default_model) if default_model in nlllmmodel else 0
+        llm = st.selectbox("Choose LLM", nlllmmodel, index=default_index)
 
-   	result = callProc("sys.NL_SQL", args, db)
-        
-   	return result
+    if submitButton:
+        if not myquestion.strip():
+            st.warning("Enter a question.")
+        elif not db:
+            st.warning("Choose at least one schema.")
+        else:
+            ans = call_nlsql(myquestion, llm, db)
+            if ans:
+                outputarg = json.loads(ans["output"])
+                resultset = ans["resultset"]
+                columnset = ans["columnset"]
 
-    
-# Set title
-def main() :
-  st.title("📷 HeatWave demo NL_SQL") 
-  st.page_link('https://dev.mysql.com/doc/heatwave/en/mys-hw-genai-nl-sql.html', label="NL_SQL Page", icon="🌎")
-  
-  col1, col2 = st.columns(2)
-  with col1 :
-    myquestion = st.text_input("Question about the image")
-    submitButton = st.button('Submit', width='stretch')
-  with col2 :
-    db = st.multiselect('Choose DB : ', getDB(), default=[ "information_schema", "performance_schema"]  )
-    nlllmmodel = getNLSQLLLMModel()
-    myindex = nlllmmodel.index('meta.llama-3.3-70b-instruct')
-    llm = st.selectbox('Choose LLM : ', nlllmmodel, index=myindex)
-  if submitButton :
-          # Now you can use `img_base64` variable as needed
-          ans = call_nlsql(myquestion, llm, db)
-          if ans :
-            outputarg = json.loads(ans['output'])
-            resultset = ans['resultset']
-            columnset = ans['columnset']
-  
-            isValidSQL = outputarg['is_sql_valid'] 
-            if isValidSQL == 1 :
-              for i in range(len(resultset)) : 
-                mydf1 = pd.DataFrame(resultset[i], columns=columnset[i])
-                st.dataframe(mydf1)
-            st.text_area("The SQL", outputarg['sql_query'], 100)
-            st.text_area("The Tables", outputarg['tables'], 100)
-  
-  
-  st.code("""
-  mysql> CALL sys.NL_SQL("NaturalLanguageStatement", @output[, options]);
-  
-    options: JSON_OBJECT(keyvalue[, keyvalue]...)
-  keyvalue: 
-  {
-    'execute', {true|false}
-    | 'schemas', JSON_ARRAY('DBName'[, 'DBName'] ...)
-    | 'tables', JSON_ARRAY(TableJSON[, TableJSON] ...)
-    | 'model_id', 'ModelID'
-    | 'verbose', {0|1|2}
-    | 'include_comments', {true|false}
-    | 'use_retry', {true|false}
-  }
-  """, language=None)
-  
+                if outputarg.get("is_sql_valid") == 1:
+                    for i in range(len(resultset)):
+                        mydf1 = pd.DataFrame(resultset[i], columns=columnset[i])
+                        st.dataframe(mydf1)
+
+                st.text_area("The SQL", outputarg.get("sql_query", ""), 100)
+                st.text_area("The Tables", outputarg.get("tables", ""), 100)
+
+    st.code(
+        """
+mysql> CALL sys.NL_SQL("NaturalLanguageStatement", @output[, options]);
+
+  options: JSON_OBJECT(keyvalue[, keyvalue]...)
+keyvalue:
+{
+  'execute', {true|false}
+  | 'schemas', JSON_ARRAY('DBName'[, 'DBName'] ...)
+  | 'tables', JSON_ARRAY(TableJSON[, TableJSON] ...)
+  | 'model_id', 'ModelID'
+  | 'verbose', {0|1|2}
+  | 'include_comments', {true|false}
+  | 'use_retry', {true|false}
+}
+""",
+        language=None,
+    )
+
 
 st.set_page_config(page_title="HeatWave Demo - NLSQL", layout="wide")
-st.session_state.logged_in = login_page()
+init_session_state()
 
-if st.session_state.logged_in:
-      setupDB()
-      main()
+if not login_page():
+    st.stop()
 
+setupDB()
+main()
